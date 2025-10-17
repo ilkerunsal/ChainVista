@@ -1,0 +1,10 @@
+apiVersion: v2
+name: blockchain-analytics
+description: >
+  A Helm chart for deploying the blockchain analytics platform including
+  the API, UI, indexer, Postgres and Redis. This chart is intended as a
+  starting point for running the stack in a Kubernetes cluster and can
+  be customized via values.yaml.
+type: application
+version: 0.1.0
+appVersion: 0.1.0

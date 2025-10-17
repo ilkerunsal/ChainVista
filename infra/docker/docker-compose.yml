@@ -1,0 +1,114 @@
+# docker-compose.yml  (Compose V2: "version" satırı yok)
+
+x-env-common: &env_common
+  AI__AnomalyBaseUrl: http://ai-anomaly:8011
+  Redis__Connection: redis:6379
+  ConnectionStrings__Default: Host=db;Port=5432;Database=blockchain_analytics;Username=postgres;Password=postgres
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: blockchain_analytics
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d blockchain_analytics"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [backend]
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [backend]
+
+  ai-anomaly:
+    build:
+      context: ../../apps/ai-anomaly
+      dockerfile: Dockerfile
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+    ports:
+      - "8011:8011"
+    # wget/curl yok; python stdlib ile healthcheck:
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8011/docs').read()"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+    networks: [backend]
+
+  api:
+    build:
+      context: ../../apps/api
+      dockerfile: Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://0.0.0.0:5000
+      JWT__Issuer: local
+      JWT__Audience: local
+      JWT__Key: dev-secret-change-me
+      MOCK_INDEXER_URL: http://mock-indexer:4000
+      <<: *env_common
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ai-anomaly:
+        condition: service_healthy
+    ports:
+      - "5000:5000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/status"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    networks: [backend]
+
+  mock-indexer:
+    build:
+      context: ../../apps/mock-indexer
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [backend]
+
+  ui:
+    build:
+      context: ../../apps/ui
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:5000     # build-time arg
+    environment:
+      VITE_API_URL: http://api:5000             # container içinden API
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "5173:3000"                             # DIŞ:5173 → İÇ:3000 (serve)
+    networks: [backend]
+
+volumes:
+  db_data:
+
+networks:
+  backend:
+    driver: bridge

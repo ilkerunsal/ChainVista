@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-indexer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-indexer
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-indexer
+    spec:
+      containers:
+        - name: indexer
+          image: "{{ .Values.indexer.image.repository }}:{{ .Values.indexer.image.tag }}"
+          env:
+            # Override these RPC URLs in your own values file to point at your
+            # blockchain node endpoints. They should correspond to the rpcEnv
+            # variables in config.json.
+            - name: RPC_URL_CHAIN1
+              value: "http://example-rpc-chain1"
+            - name: RPC_URL_CHAIN2
+              value: "http://example-rpc-chain2"

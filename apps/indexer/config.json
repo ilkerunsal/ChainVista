@@ -1,0 +1,26 @@
+{
+  "chains": [
+    {
+      "name": "chain1",
+      "rpcEnv": "RPC_URL_CHAIN1",
+      "contracts": [
+        {
+          "address": "0x0000000000000000000000000000000000000001",
+          "abiPath": "./abis/ERC20.json",
+          "events": ["Transfer(address indexed from, address indexed to, uint256 value)"]
+        }
+      ]
+    },
+    {
+      "name": "chain2",
+      "rpcEnv": "RPC_URL_CHAIN2",
+      "contracts": [
+        {
+          "address": "0x0000000000000000000000000000000000000002",
+          "abiPath": "./abis/ERC721.json",
+          "events": ["Transfer(address indexed from, address indexed to, uint256 tokenId)"]
+        }
+      ]
+    }
+  ]
+}
